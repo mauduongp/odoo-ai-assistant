@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_ai_chat" name="AI Chat" parent="m_ai_base.menu_ai" action="m_ai_chat.action_ai_chat_session" sequence="20"/>
+</odoo>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="ai_chat_session_view_list" model="ir.ui.view">
+            <field name="name">AI Chat Session List</field>
+            <field name="model">m_ai.chat.session</field>
+            <field name="arch" type="xml">
+                <list string="AI Chat Sessions">
+                    <field name="name"/>
+                    <field name="user_id"/>
+                    <field name="last_message_at"/>
+                    <field name="active"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="ai_chat_message_view_list" model="ir.ui.view">
+            <field name="name">AI Chat Message List</field>
+            <field name="model">m_ai.chat.message</field>
+            <field name="arch" type="xml">
+                <list string="Messages" create="false" delete="false" edit="false">
+                    <field name="create_date"/>
+                    <field name="role"/>
+                    <field name="content"/>
+                    <field name="action_name"/>
+                    <field name="error_message"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="ai_chat_session_view_form" model="ir.ui.view">
+            <field name="name">AI Chat Session Form</field>
+            <field name="model">m_ai.chat.session</field>
+            <field name="arch" type="xml">
+                <form string="AI Chat">
+                    <header>
+                        <button name="action_send_message" type="object" class="btn-primary" string="Send"/>
+                    </header>
+                    <sheet>
+                        <group>
+                            <field name="name"/>
+                            <field name="user_id" readonly="1"/>
+                            <field name="last_message_at" readonly="1"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Ask AI">
+                            <field name="input_message" placeholder="What is status of SO00012?"/>
+                        </group>
+                        <group string="Conversation">
+                            <field name="message_ids" mode="list" readonly="1"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_ai_chat_session" model="ir.actions.act_window">
+            <field name="name">AI Chat</field>
+            <field name="res_model">m_ai.chat.session</field>
+            <field name="view_mode">list,form</field>
+            <field name="view_id" ref="ai_chat_session_view_list"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Start a new AI chat session
+                </p>
+            </field>
+        </record>
+    </data>
+</odoo>

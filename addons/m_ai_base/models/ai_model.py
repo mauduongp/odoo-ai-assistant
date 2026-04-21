@@ -15,7 +15,7 @@ class AiModel(models.Model):
         records = super(AiModel, self).create(vals_list)
         for record in records:
             if record.default:
-                record._update_provider_default()
+                record._update_default_model()
         return records
 
     def write(self, vals):

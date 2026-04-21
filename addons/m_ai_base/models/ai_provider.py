@@ -1,3 +1,5 @@
+import json
+
 from odoo import api, fields, _
 from odoo.exceptions import UserError
 from odoo.models import Model
@@ -55,6 +57,26 @@ class AiProvider(Model):
         if not hasattr(self, method_name):
             raise UserError(_("Method %s not implemented for provider %s") % (method_name, self.provider_type))
         return getattr(self, method_name)(prompt, system_prompt, model_code)
+
+    def get_structured_response(self, prompt, system_prompt):
+        self.ensure_one()
+        raw_response = self.get_response(prompt, system_prompt)
+        if not raw_response:
+            return {"type": "text", "message": ""}
+        if isinstance(raw_response, dict):
+            return raw_response
+
+        payload = raw_response.strip()
+        if payload.startswith("```"):
+            payload = payload.strip("`")
+            payload = payload.replace("json", "", 1).strip()
+        try:
+            parsed = json.loads(payload)
+            if isinstance(parsed, dict) and parsed.get("type"):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+        return {"type": "text", "message": raw_response}
 
     def action_test_connection(self):
         self.ensure_one()
