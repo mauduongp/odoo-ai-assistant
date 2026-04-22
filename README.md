@@ -2,6 +2,10 @@
 
 AI assistant modules for Odoo 18 with provider abstraction, Discuss integration, and pluggable domain tools.
 
+## Usage Guide
+
+For full setup and daily operation instructions, see `USAGE.md`.
+
 ## Modules
 
 - `m_ai_core`: provider config, orchestrator, generic read tools, debug mode.
