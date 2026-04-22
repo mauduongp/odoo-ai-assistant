@@ -11,7 +11,7 @@ Read-only AI chat assistant for Odoo workflows.
     """,
     "category": "AI/AI",
     "website": "",
-    "depends": ["m_ai_core"],
+    "depends": ["m_ai_core", "m_ai_tool_sale"],
     "data": [
         "security/ir.model.access.csv",
         "data/ai_chat_security.xml",

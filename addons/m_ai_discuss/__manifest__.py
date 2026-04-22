@@ -11,7 +11,7 @@ Bridge Discuss messages to AI core orchestrator service.
     """,
     "category": "AI/AI",
     "website": "",
-    "depends": ["m_ai_core", "mail"],
+    "depends": ["m_ai_core", "m_ai_tool_sale", "mail"],
     "data": [
         "data/ai_discuss_data.xml",
     ],

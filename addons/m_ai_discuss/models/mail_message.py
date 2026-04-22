@@ -1,7 +1,10 @@
 import html
+import logging
 import re
 
 from odoo import _, api, models
+
+_logger = logging.getLogger(__name__)
 
 
 class MailMessage(models.Model):
@@ -100,9 +103,14 @@ class MailMessage(models.Model):
                 )
                 message._post_ai_reply(channel, result.get("reply") or _("No reply generated."))
             except Exception as exc:
-                message._post_ai_reply(
-                    channel, _("I could not process your request: %s") % str(exc)
-                )
+                _logger.exception("AI discuss processing failed")
+                if message._is_ai_debug_mode():
+                    msg = _("I could not process your request: %s") % str(exc)
+                else:
+                    msg = _(
+                        "I could not process your request. Enable AI Debug Mode in Settings for detailed errors."
+                    )
+                message._post_ai_reply(channel, msg)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -110,3 +118,7 @@ class MailMessage(models.Model):
         if not self.env.context.get("m_ai_skip_ai_reply"):
             messages._process_ai_assistant()
         return messages
+
+    def _is_ai_debug_mode(self):
+        value = self.env["ir.config_parameter"].sudo().get_param("m_ai.ai_debug_mode")
+        return str(value).lower() in ("1", "true", "yes", "on")
