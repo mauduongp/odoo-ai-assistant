@@ -32,3 +32,6 @@ build/
 # Docker/local volumes and temporary files
 *.pid
 tmp/
+
+# Odoo source code
+odoo_src/
