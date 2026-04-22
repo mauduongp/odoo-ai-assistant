@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="partner_ai_assistant" model="res.partner">
+        <field name="name">AI Assistant</field>
+        <field name="active" eval="True"/>
+    </record>
+
+    <record id="user_ai_assistant" model="res.users">
+        <field name="name">AI Assistant</field>
+        <field name="login">ai.assistant.bot</field>
+        <field name="partner_id" ref="m_ai_discuss.partner_ai_assistant"/>
+        <field name="active" eval="True"/>
+        <field name="groups_id" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+</odoo>
