@@ -6,7 +6,12 @@ class AiToolService(models.AbstractModel):
     _name = "m_ai.tool.service"
     _description = "AI Tool Service"
 
-    _ALLOWED_TOOLS = {"query_records", "read_records"}
+    _ALLOWED_TOOLS = {
+        "query_records",
+        "read_records",
+        "prepare_create_record",
+        "create_record",
+    }
     _MAX_LIMIT = 20
 
     def execute_tool(self, tool_name, arguments):
@@ -18,6 +23,10 @@ class AiToolService(models.AbstractModel):
             return self._tool_query_records(arguments)
         if tool_name == "read_records":
             return self._tool_read_records(arguments)
+        if tool_name == "prepare_create_record":
+            return self._tool_prepare_create_record(arguments)
+        if tool_name == "create_record":
+            return self._tool_create_record(arguments)
         raise UserError(_("Tool '%s' is not implemented.") % tool_name)
 
     def _tool_query_records(self, arguments):
@@ -58,6 +67,34 @@ class AiToolService(models.AbstractModel):
             "records": self._serialize_records(recordset, fields),
         }
 
+    def _tool_prepare_create_record(self, arguments):
+        model_name = (arguments.get("model") or "").strip()
+        values = arguments.get("values") or {}
+
+        model = self._validate_create_model_and_values(model_name, values)
+        normalized_values = self._normalize_create_values(model, values)
+        return {
+            "model": model_name,
+            "prepared": True,
+            "values": normalized_values,
+            "warnings": [],
+        }
+
+    def _tool_create_record(self, arguments):
+        model_name = (arguments.get("model") or "").strip()
+        values = arguments.get("values") or {}
+
+        model = self._validate_create_model_and_values(model_name, values)
+        normalized_values = self._normalize_create_values(model, values)
+        record = self.env[model].create(normalized_values)
+        return {
+            "model": model_name,
+            "count": 1,
+            "record_id": record.id,
+            "record_name": record.display_name,
+            "values": normalized_values,
+        }
+
     def _validate_model_and_fields(self, model_name, fields):
         allowed_models = self._get_allowed_models()
         if model_name not in allowed_models:
@@ -70,6 +107,24 @@ class AiToolService(models.AbstractModel):
         if forbidden:
             raise UserError(
                 _("Fields are not allowed for model '%s': %s")
+                % (model_name, ", ".join(forbidden))
+            )
+        return model_name
+
+    def _validate_create_model_and_values(self, model_name, values):
+        allowed_models = self._get_create_allowed_models()
+        if model_name not in allowed_models:
+            raise UserError(
+                _("Model '%s' is not allowed for AI create tools.") % model_name
+            )
+        if not isinstance(values, dict) or not values:
+            raise UserError(_("Argument 'values' must be a non-empty object."))
+
+        allowed_fields = allowed_models[model_name]
+        forbidden = [field for field in values.keys() if field not in allowed_fields]
+        if forbidden:
+            raise UserError(
+                _("Fields are not allowed for create on model '%s': %s")
                 % (model_name, ", ".join(forbidden))
             )
         return model_name
@@ -99,6 +154,43 @@ class AiToolService(models.AbstractModel):
     def _get_allowed_models(self):
         """Return mapping: model -> set(allowed fields). Overridden by tool modules."""
         return {}
+
+    def _get_create_allowed_models(self):
+        """Return mapping: model -> set(allowed create fields)."""
+        return {}
+
+    def _normalize_create_values(self, model_name, values):
+        model = self.env[model_name]
+        normalized = {}
+        for field_name, value in values.items():
+            field = model._fields.get(field_name)
+            if field and field.type == "many2one":
+                normalized[field_name] = self._normalize_many2one_create_value(value)
+            else:
+                normalized[field_name] = value
+        return normalized
+
+    def _normalize_many2one_create_value(self, value):
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            text = value.strip()
+            if text.isdigit():
+                return int(text)
+            raise UserError(
+                _(
+                    "Many2one values must be an integer id or object with an 'id' key."
+                )
+            )
+        if isinstance(value, dict):
+            candidate = value.get("id")
+            if isinstance(candidate, int):
+                return candidate
+            if isinstance(candidate, str) and candidate.strip().isdigit():
+                return int(candidate.strip())
+        raise UserError(
+            _("Many2one values must be an integer id or object with an 'id' key.")
+        )
 
     def _serialize_records(self, records, fields):
         rows = []

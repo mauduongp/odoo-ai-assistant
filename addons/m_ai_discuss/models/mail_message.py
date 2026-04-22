@@ -1,3 +1,4 @@
+import json
 import html
 import logging
 import re
@@ -78,6 +79,45 @@ class MailMessage(models.Model):
                     continue
                 raise
 
+    def _pending_create_key(self, channel, ai_user):
+        channel_model = getattr(channel, "_name", "mail.channel")
+        return "m_ai.pending_create.%s.%s.%s" % (
+            channel_model,
+            channel.id,
+            ai_user.id,
+        )
+
+    def _get_pending_create(self, channel, ai_user):
+        key = self._pending_create_key(channel, ai_user)
+        raw = self.env["ir.config_parameter"].sudo().get_param(key)
+        if not raw:
+            return False
+        try:
+            payload = json.loads(raw)
+            if payload.get("model") and isinstance(payload.get("values"), dict):
+                return payload
+        except Exception:
+            _logger.exception("Failed to decode pending AI create payload")
+        return False
+
+    def _set_pending_create(self, channel, ai_user, payload):
+        key = self._pending_create_key(channel, ai_user)
+        self.env["ir.config_parameter"].sudo().set_param(
+            key, json.dumps(payload, ensure_ascii=False)
+        )
+
+    def _clear_pending_create(self, channel, ai_user):
+        key = self._pending_create_key(channel, ai_user)
+        self.env["ir.config_parameter"].sudo().set_param(key, "")
+
+    def _is_confirm_prompt(self, prompt):
+        text = (prompt or "").lower()
+        return any(token in text for token in ("confirm", "yes, create", "create it"))
+
+    def _is_cancel_prompt(self, prompt):
+        text = (prompt or "").lower()
+        return any(token in text for token in ("cancel", "stop", "do not create"))
+
     def _process_ai_assistant(self):
         for message in self:
             if message.model not in ("mail.channel", "discuss.channel"):
@@ -113,9 +153,63 @@ class MailMessage(models.Model):
                 continue
 
             try:
-                result = message.env["m_ai.orchestrator.service"].with_user(ai_user).process_message(
-                    prompt
+                pending_create = message._get_pending_create(channel, ai_user)
+                if pending_create and message._is_cancel_prompt(prompt):
+                    message._clear_pending_create(channel, ai_user)
+                    message._post_ai_reply(
+                        channel, _("Okay, I cancelled the pending create request.")
+                    )
+                    continue
+
+                if pending_create and message._is_confirm_prompt(prompt):
+                    create_result = (
+                        message.env["m_ai.tool.service"]
+                        .with_user(ai_user)
+                        .execute_tool("create_record", pending_create)
+                    )
+                    message._clear_pending_create(channel, ai_user)
+                    message._post_ai_reply(
+                        channel,
+                        _("Created %(model)s %(name)s (ID %(id)s).")
+                        % {
+                            "model": create_result.get("model", "record"),
+                            "name": create_result.get("record_name", ""),
+                            "id": create_result.get("record_id"),
+                        },
+                    )
+                    continue
+
+                result = (
+                    message.env["m_ai.orchestrator.service"]
+                    .with_user(ai_user)
+                    .process_message(prompt)
                 )
+                if result.get("action_name") == "prepare_create_record":
+                    payload = {}
+                    action_payload = result.get("action_payload") or ""
+                    if action_payload:
+                        try:
+                            payload_wrapper = json.loads(action_payload)
+                            payload = {
+                                "model": (
+                                    payload_wrapper.get("arguments", {}).get("model")
+                                    or payload_wrapper.get("result", {}).get("model")
+                                ),
+                                "values": payload_wrapper.get("result", {}).get("values")
+                                or payload_wrapper.get("arguments", {}).get("values")
+                                or {},
+                            }
+                        except Exception:
+                            _logger.exception("Failed to decode prepare_create_record payload")
+                    if payload.get("model") and isinstance(payload.get("values"), dict):
+                        message._set_pending_create(channel, ai_user, payload)
+                        result["reply"] = (
+                            (result.get("reply") or _("Draft prepared."))
+                            + " "
+                            + _(
+                                "No record created yet. Reply with 'confirm create order' to create it."
+                            )
+                        )
                 message._post_ai_reply(channel, result.get("reply") or _("No reply generated."))
             except Exception as exc:
                 _logger.exception("AI discuss processing failed")

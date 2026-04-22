@@ -11,7 +11,12 @@ class AiOrchestratorService(models.AbstractModel):
     _name = "m_ai.orchestrator.service"
     _description = "AI Orchestrator Service"
 
-    _ALLOWED_ACTIONS = {"query_records", "read_records"}
+    _ALLOWED_ACTIONS = {
+        "query_records",
+        "read_records",
+        "prepare_create_record",
+        "create_record",
+    }
 
     def process_message(self, user_prompt):
         provider = self.env["m_ai.provider"].get_provider()
@@ -32,7 +37,11 @@ class AiOrchestratorService(models.AbstractModel):
             "You are an Odoo assistant. Return JSON only. "
             'Supported responses: {"type":"text","message":"..."} or '
             '{"type":"action","action":"query_records","arguments":{"model":"<model.name>","domain":[["name","=","VALUE"]],"fields":["name"],"limit":1}} or '
-            '{"type":"action","action":"read_records","arguments":{"model":"<model.name>","ids":[1],"fields":["name"]}}. '
+            '{"type":"action","action":"read_records","arguments":{"model":"<model.name>","ids":[1],"fields":["name"]}} or '
+            '{"type":"action","action":"prepare_create_record","arguments":{"model":"<model.name>","values":{"field":"value"}}} or '
+            '{"type":"action","action":"create_record","arguments":{"model":"<model.name>","values":{"field":"value"}}}. '
+            "For create requests, call prepare_create_record first. "
+            "Only call create_record after the user explicitly confirms creation. "
             "Use only allowed model names and fields."
         )
 

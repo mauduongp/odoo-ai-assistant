@@ -21,3 +21,14 @@ class AiToolService(models.AbstractModel):
             "write_date",
         }
         return models_map
+
+    def _get_create_allowed_models(self):
+        models_map = dict(super()._get_create_allowed_models())
+        models_map["sale.order"] = {
+            "partner_id",
+            "client_order_ref",
+            "commitment_date",
+            "note",
+            "origin",
+        }
+        return models_map

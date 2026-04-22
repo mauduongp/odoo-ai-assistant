@@ -19,3 +19,17 @@ class TestAiToolService(TransactionCase):
     def test_unknown_tool_rejected(self):
         with self.assertRaises(UserError):
             self.env["m_ai.tool.service"].execute_tool("delete_records", {})
+
+    def test_prepare_create_blocks_unregistered_model(self):
+        with self.assertRaises(UserError):
+            self.env["m_ai.tool.service"].execute_tool(
+                "prepare_create_record",
+                {"model": "res.partner", "values": {"name": "X"}},
+            )
+
+    def test_create_record_blocks_unregistered_model(self):
+        with self.assertRaises(UserError):
+            self.env["m_ai.tool.service"].execute_tool(
+                "create_record",
+                {"model": "res.partner", "values": {"name": "X"}},
+            )

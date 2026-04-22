@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from odoo.exceptions import UserError
 from odoo.tests.common import TransactionCase, tagged
 
 
@@ -26,3 +27,52 @@ class TestAiToolSale(TransactionCase):
         prompt = self.env["m_ai.orchestrator.service"]._build_system_prompt()
         self.assertIn("sale.order", prompt)
         self.assertIn("invoice_status", prompt)
+        self.assertIn("prepare_create_record", prompt)
+
+    def test_prepare_create_sale_order_returns_preview_only(self):
+        start_count = self.env["sale.order"].search_count([])
+        result = self.env["m_ai.tool.service"].execute_tool(
+            "prepare_create_record",
+            {
+                "model": "sale.order",
+                "values": {
+                    "partner_id": self.order.partner_id.id,
+                    "client_order_ref": "PO-001",
+                },
+            },
+        )
+        end_count = self.env["sale.order"].search_count([])
+
+        self.assertTrue(result["prepared"])
+        self.assertEqual(result["model"], "sale.order")
+        self.assertEqual(result["values"]["partner_id"], self.order.partner_id.id)
+        self.assertEqual(start_count, end_count)
+
+    def test_create_sale_order_from_allowed_values(self):
+        result = self.env["m_ai.tool.service"].execute_tool(
+            "create_record",
+            {
+                "model": "sale.order",
+                "values": {
+                    "partner_id": self.order.partner_id.id,
+                    "client_order_ref": "PO-002",
+                },
+            },
+        )
+        created = self.env["sale.order"].browse(result["record_id"])
+        self.assertTrue(created.exists())
+        self.assertEqual(created.partner_id.id, self.order.partner_id.id)
+        self.assertEqual(created.client_order_ref, "PO-002")
+
+    def test_create_sale_order_rejects_forbidden_fields(self):
+        with self.assertRaises(UserError):
+            self.env["m_ai.tool.service"].execute_tool(
+                "create_record",
+                {
+                    "model": "sale.order",
+                    "values": {
+                        "partner_id": self.order.partner_id.id,
+                        "amount_total": 999,
+                    },
+                },
+            )
