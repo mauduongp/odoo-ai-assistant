@@ -227,11 +227,15 @@ class AiToolService(models.AbstractModel):
 
     def _serialize_records(self, records, fields):
         rows = []
+        read_fields = list(fields)
+        if "id" not in read_fields:
+            read_fields.append("id")
         for record in records:
-            values = record.read(fields)[0]
+            values = record.read(read_fields)[0]
             serialized = {}
             for field_name in fields:
                 serialized[field_name] = self._serialize_field(record, field_name, values[field_name])
+            serialized["id"] = record.id
             rows.append(serialized)
         return rows
 
