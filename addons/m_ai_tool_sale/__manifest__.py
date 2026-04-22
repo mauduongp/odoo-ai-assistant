@@ -11,7 +11,7 @@ Sale model policies and formatting for generic AI tools.
     """,
     "category": "AI/AI",
     "website": "",
-    "depends": ["m_ai_core", "sale"],
+    "depends": ["m_ai_core", "sale_management"],
     "data": [],
     "installable": True,
     "application": False,

@@ -39,6 +39,10 @@ All notable changes to this project are documented in this file.
 - Improved tool input robustness:
   - tolerant parsing for `ids` argument forms.
   - defensive serialization for varying many2one value shapes.
+- Migrated project runtime defaults from Odoo 18 to Odoo 19:
+  - Docker image/build defaults updated to `19.0`.
+  - docs updated for Odoo 19 setup and usage.
+- Updated sale tool dependency to `sale_management` for Odoo 19 compatibility.
 
 ### Fixed
 - Multiple response quality issues:
@@ -46,6 +50,8 @@ All notable changes to this project are documented in this file.
   - prevented raw tool JSON leakage to end users.
 - Discuss no-response scenarios caused by module dependency and runtime edge cases.
 - Failures caused by strict or brittle tool argument/value handling.
+- Odoo 19 data loading error on bot user provisioning:
+  - replaced invalid `groups_id` with `group_ids` in `m_ai_discuss` data.
 
 ## [2026-04-22]
 

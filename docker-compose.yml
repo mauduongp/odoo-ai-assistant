@@ -7,7 +7,7 @@
 #   ./scripts/ci-test.sh
 #
 # Env overrides:
-#   ODOO_VERSION=17.0 ODOO_PORT=8070 docker compose up
+#   ODOO_VERSION=19.0 ODOO_PORT=8070 docker compose up
 
 services:
   db:
@@ -27,8 +27,8 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        ODOO_VERSION: ${ODOO_VERSION:-18.0}
-    image: odoo-ai-intelligence-web:${ODOO_VERSION:-18.0}
+        ODOO_VERSION: ${ODOO_VERSION:-19.0}
+    image: odoo-ai-intelligence-web:${ODOO_VERSION:-19.0}
     depends_on:
       db:
         condition: service_healthy

@@ -1,6 +1,6 @@
 # Odoo AI Intelligence
 
-AI assistant framework for Odoo 18 with:
+AI assistant framework for Odoo 19 with:
 - provider abstraction,
 - tool-driven orchestration,
 - Discuss bot integration,

@@ -1,5 +1,5 @@
 # Extends official Odoo with addon Python dependencies (Runbot / CI image).
-ARG ODOO_VERSION=18.0
+ARG ODOO_VERSION=19.0
 FROM odoo:${ODOO_VERSION}
 
 USER root

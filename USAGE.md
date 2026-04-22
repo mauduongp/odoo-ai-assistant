@@ -5,8 +5,9 @@ This guide explains how to run and use the Odoo AI assistant project in a new en
 ## 1) Prerequisites
 
 - Docker and Docker Compose
-- Odoo 18-compatible environment
+- Odoo 19-compatible environment
 - OpenAI/OpenRouter API key (or compatible provider key)
+- Optional but recommended: local Odoo 19 source addons (`odoo_src`) for reference during development/debugging
 
 ## 2) Start the stack
 
