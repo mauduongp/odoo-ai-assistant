@@ -1,0 +1,38 @@
+.o_m_ai_pending_create_actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.o_m_ai_pending_create_action {
+    display: inline-block;
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none !important;
+    color: #ffffff !important;
+    border: 1px solid transparent;
+}
+
+.o_m_ai_pending_create_action_confirm {
+    background-color: #0b6bcb;
+    border-color: #08539e;
+}
+
+.o_m_ai_pending_create_action_confirm:hover {
+    background-color: #0959aa;
+}
+
+.o_m_ai_pending_create_action_cancel {
+    background-color: #b42318;
+    border-color: #912018;
+}
+
+.o_m_ai_pending_create_action_cancel:hover {
+    background-color: #971b12;
+}
+
+.o_m_ai_pending_create_actions_done {
+    color: #525252;
+    font-style: italic;
+}

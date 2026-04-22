@@ -17,7 +17,12 @@ Bridge Discuss messages to AI core orchestrator service.
     ],
     "installable": True,
     "application": False,
-    "assets": {},
+    "assets": {
+        "web.assets_backend": [
+            "m_ai_discuss/static/src/js/pending_create_buttons.js",
+            "m_ai_discuss/static/src/scss/pending_create_buttons.scss",
+        ],
+    },
     "author": "Mau DP",
     "license": "LGPL-3",
 }

@@ -24,7 +24,7 @@ class TestAiDiscussCreateFlow(TransactionCase):
         )
 
     def test_prepare_action_stores_pending_payload(self):
-        message = self._new_message("/ai create order for this customer")
+        message = self._new_message("/ai create draft record")
         pending_payload = {
             "arguments": {
                 "model": "sale.order",
@@ -54,8 +54,26 @@ class TestAiDiscussCreateFlow(TransactionCase):
             pending_payload["result"]["values"]["partner_id"],
         )
 
+    def test_prepare_reply_contains_confirm_button_link(self):
+        message = self._new_message("/ai create draft record")
+        with patch.object(
+            type(self.env["m_ai.orchestrator.service"]),
+            "process_message",
+            return_value={
+                "reply": "Preview prepared.",
+                "action_name": "prepare_create_record",
+                "action_payload": '{"arguments":{"model":"sale.order","values":{"partner_id":%d}},"result":{"model":"sale.order","values":{"partner_id":%d}}}'
+                % (self.env.user.partner_id.id, self.env.user.partner_id.id),
+            },
+        ), patch.object(type(self.message_model), "_post_ai_reply") as mocked_post:
+            message._process_ai_assistant()
+
+        sent_body = mocked_post.call_args[0][1]
+        self.assertIn("/m_ai_discuss/confirm_create", sent_body)
+        self.assertIn("/m_ai_discuss/cancel_create", sent_body)
+
     def test_confirm_prompt_creates_record_and_clears_pending(self):
-        message = self._new_message("/ai confirm create order")
+        message = self._new_message("/ai confirm create")
         message._set_pending_create(
             self.channel,
             self.env.user,

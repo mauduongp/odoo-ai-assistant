@@ -48,6 +48,22 @@ class TestAiToolSale(TransactionCase):
         self.assertEqual(result["values"]["partner_id"], self.order.partner_id.id)
         self.assertEqual(start_count, end_count)
 
+    def test_prepare_create_sale_order_drops_forbidden_fields(self):
+        result = self.env["m_ai.tool.service"].execute_tool(
+            "prepare_create_record",
+            {
+                "model": "sale.order",
+                "values": {
+                    "partner_id": self.order.partner_id.id,
+                    "user_id": self.env.user.id,
+                },
+            },
+        )
+        self.assertEqual(result["values"]["partner_id"], self.order.partner_id.id)
+        self.assertNotIn("user_id", result["values"])
+        self.assertTrue(result["warnings"])
+        self.assertIn("user_id", result["warnings"][0])
+
     def test_create_sale_order_from_allowed_values(self):
         result = self.env["m_ai.tool.service"].execute_tool(
             "create_record",

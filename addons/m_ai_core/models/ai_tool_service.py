@@ -71,13 +71,31 @@ class AiToolService(models.AbstractModel):
         model_name = (arguments.get("model") or "").strip()
         values = arguments.get("values") or {}
 
-        model = self._validate_create_model_and_values(model_name, values)
-        normalized_values = self._normalize_create_values(model, values)
+        model = self._validate_create_model(model_name)
+        if not isinstance(values, dict) or not values:
+            raise UserError(_("Argument 'values' must be a non-empty object."))
+        sanitized_values, dropped_fields = self._sanitize_create_values(model, values)
+        if not sanitized_values:
+            raise UserError(
+                _(
+                    "No allowed fields remain after sanitization for model '%s'."
+                )
+                % model_name
+            )
+        normalized_values = self._normalize_create_values(model, sanitized_values)
+        warnings = []
+        if dropped_fields:
+            warnings.append(
+                _(
+                    "Dropped non-allowed create fields for model '%(model)s': %(fields)s"
+                )
+                % {"model": model_name, "fields": ", ".join(dropped_fields)}
+            )
         return {
             "model": model_name,
             "prepared": True,
             "values": normalized_values,
-            "warnings": [],
+            "warnings": warnings,
         }
 
     def _tool_create_record(self, arguments):
@@ -112,15 +130,11 @@ class AiToolService(models.AbstractModel):
         return model_name
 
     def _validate_create_model_and_values(self, model_name, values):
-        allowed_models = self._get_create_allowed_models()
-        if model_name not in allowed_models:
-            raise UserError(
-                _("Model '%s' is not allowed for AI create tools.") % model_name
-            )
+        model_name = self._validate_create_model(model_name)
         if not isinstance(values, dict) or not values:
             raise UserError(_("Argument 'values' must be a non-empty object."))
 
-        allowed_fields = allowed_models[model_name]
+        allowed_fields = self._get_create_allowed_models()[model_name]
         forbidden = [field for field in values.keys() if field not in allowed_fields]
         if forbidden:
             raise UserError(
@@ -128,6 +142,25 @@ class AiToolService(models.AbstractModel):
                 % (model_name, ", ".join(forbidden))
             )
         return model_name
+
+    def _validate_create_model(self, model_name):
+        allowed_models = self._get_create_allowed_models()
+        if model_name not in allowed_models:
+            raise UserError(
+                _("Model '%s' is not allowed for AI create tools.") % model_name
+            )
+        return model_name
+
+    def _sanitize_create_values(self, model_name, values):
+        allowed_fields = self._get_create_allowed_models()[model_name]
+        sanitized = {}
+        dropped = []
+        for field_name, field_value in values.items():
+            if field_name in allowed_fields:
+                sanitized[field_name] = field_value
+            else:
+                dropped.append(field_name)
+        return sanitized, dropped
 
     def _normalize_ids(self, raw_ids):
         if raw_ids is None:
