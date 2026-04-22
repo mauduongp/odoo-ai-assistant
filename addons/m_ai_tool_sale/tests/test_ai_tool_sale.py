@@ -22,18 +22,7 @@ class TestAiToolSale(TransactionCase):
         self.assertEqual(result["count"], 1)
         self.assertEqual(result["records"][0]["name"], self.order.name)
 
-    def test_sale_order_human_formatter(self):
-        result = self.env["m_ai.orchestrator.service"]._format_model_records(
-            "sale.order",
-            [
-                {
-                    "name": self.order.name,
-                    "state": {"value": "sale", "label": "Sales Order"},
-                    "invoice_status": {"value": "no", "label": "Nothing to Invoice"},
-                    "amount_total": self.order.amount_total,
-                }
-            ],
-            1,
-        )
-        self.assertIn("sale order", result.lower())
-        self.assertIn(self.order.name, result)
+    def test_sale_prompt_hint_added(self):
+        prompt = self.env["m_ai.orchestrator.service"]._build_system_prompt()
+        self.assertIn("sale.order", prompt)
+        self.assertIn("invoice_status", prompt)

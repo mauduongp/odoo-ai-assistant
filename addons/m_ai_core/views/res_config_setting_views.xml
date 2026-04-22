@@ -15,6 +15,9 @@
                         <setting id="ai_debug_mode_setting" title="AI Debug Mode" string="AI Debug Mode">
                             <field name="ai_debug_mode"/>
                         </setting>
+                        <setting id="ai_natural_response_mode_setting" title="AI Natural Response Mode" string="AI Natural Response Mode">
+                            <field name="ai_natural_response_mode"/>
+                        </setting>
                     </block>
                 </app>
             </xpath>

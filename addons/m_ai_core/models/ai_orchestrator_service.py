@@ -23,7 +23,9 @@ class AiOrchestratorService(models.AbstractModel):
                 user_prompt,
                 json.dumps(envelope, ensure_ascii=False),
             )
-        return self._resolve_envelope(envelope)
+        return self._resolve_envelope(
+            envelope, user_prompt=user_prompt, provider=provider
+        )
 
     def _build_system_prompt(self):
         return (
@@ -34,7 +36,7 @@ class AiOrchestratorService(models.AbstractModel):
             "Use only allowed model names and fields."
         )
 
-    def _resolve_envelope(self, envelope):
+    def _resolve_envelope(self, envelope, user_prompt="", provider=None):
         response_type = envelope.get("type")
         if response_type == "action":
             action_name = envelope.get("action")
@@ -50,7 +52,13 @@ class AiOrchestratorService(models.AbstractModel):
                     json.dumps(result, ensure_ascii=False),
                 )
             return {
-                "reply": self._format_tool_result(action_name, result),
+                "reply": self._format_tool_result(
+                    action_name,
+                    result,
+                    user_prompt=user_prompt,
+                    arguments=arguments,
+                    provider=provider,
+                ),
                 "action_name": action_name,
                 "action_payload": json.dumps(
                     {"arguments": arguments, "result": result}, sort_keys=True
@@ -62,15 +70,25 @@ class AiOrchestratorService(models.AbstractModel):
             message = _("I could not understand the request. Please rephrase.")
         return {"reply": message, "action_name": False, "action_payload": False}
 
-    def _format_tool_result(self, action_name, result):
+    def _format_tool_result(
+        self, action_name, result, user_prompt="", arguments=None, provider=None
+    ):
+        if self._is_natural_response_mode() and provider:
+            answer = self._generate_natural_answer(
+                provider=provider,
+                user_prompt=user_prompt,
+                action_name=action_name,
+                arguments=arguments or {},
+                result=result,
+            )
+            if answer:
+                return answer
+
         count = result.get("count", 0)
         model = result.get("model", "record")
         records = result.get("records", [])
         if not records:
             return _("No %s records matched your request.") % model
-        custom = self._format_model_records(model, records, count)
-        if custom:
-            return custom
         return _(
             "I found %(count)s %(model)s record(s). Raw data: %(records)s"
         ) % {
@@ -79,15 +97,69 @@ class AiOrchestratorService(models.AbstractModel):
             "records": json.dumps(records, ensure_ascii=False),
         }
 
-    def _format_model_records(self, model, records, count):
-        """Return formatted human response for model, or False for default."""
-        return False
-
-    def _label_or_value(self, field_value):
-        if isinstance(field_value, dict):
-            return field_value.get("label") or field_value.get("value")
-        return field_value
-
     def _is_debug_mode(self):
         value = self.env["ir.config_parameter"].sudo().get_param("m_ai.ai_debug_mode")
         return str(value).lower() in ("1", "true", "yes", "on")
+
+    def _is_natural_response_mode(self):
+        value = self.env["ir.config_parameter"].sudo().get_param(
+            "m_ai.ai_natural_response_mode", "True"
+        )
+        return str(value).lower() in ("1", "true", "yes", "on")
+
+    def _generate_natural_answer(
+        self, provider, user_prompt, action_name, arguments, result
+    ):
+        generation_system_prompt = (
+            "You are an Odoo assistant. Write a concise, natural answer for the user. "
+            "Use only facts from the provided tool result JSON. "
+            "Do not invent records, fields, or values. "
+            "If no records are present, say that clearly and suggest a useful next check. "
+            "Use plain sentences with no markdown bullets, no bold text, and no code blocks. "
+            "Avoid repeating field names unless needed. "
+            "If one record is found, answer in one sentence. "
+            "If multiple records are found, summarize first and then list only key identifiers. "
+            "Return plain text only. Do not return JSON."
+        )
+        generation_prompt = (
+            f"User question:\n{user_prompt}\n\n"
+            f"Action:\n{action_name}\n\n"
+            f"Arguments JSON:\n{json.dumps(arguments, ensure_ascii=False)}\n\n"
+            f"Tool result JSON:\n{json.dumps(result, ensure_ascii=False)}\n\n"
+            "Write the final user-facing answer."
+        )
+        try:
+            raw_answer = provider.get_response(generation_prompt, generation_system_prompt)
+            return self._sanitize_final_answer(raw_answer)
+        except Exception:
+            _logger.exception("AI natural response generation failed")
+            return False
+
+    def _sanitize_final_answer(self, raw_answer):
+        if not raw_answer:
+            return False
+        if isinstance(raw_answer, dict):
+            if raw_answer.get("type") == "text":
+                return raw_answer.get("message")
+            return json.dumps(raw_answer, ensure_ascii=False)
+
+        text = str(raw_answer).strip()
+        decoder = json.JSONDecoder()
+        idx = 0
+        text_messages = []
+        while idx < len(text):
+            brace_idx = text.find("{", idx)
+            if brace_idx == -1:
+                break
+            try:
+                obj, end_idx = decoder.raw_decode(text[brace_idx:])
+            except Exception:
+                idx = brace_idx + 1
+                continue
+            if isinstance(obj, dict) and obj.get("type") == "text" and obj.get("message"):
+                text_messages.append(obj.get("message"))
+            idx = brace_idx + end_idx
+
+        if text_messages:
+            return text_messages[-1]
+        return text

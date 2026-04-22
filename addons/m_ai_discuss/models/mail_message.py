@@ -1,6 +1,7 @@
 import html
 import logging
 import re
+import time
 
 from odoo import _, api, models
 
@@ -61,7 +62,21 @@ class MailMessage(models.Model):
         post_channel = channel.with_context(m_ai_skip_ai_reply=True).sudo()
         if bot_user:
             post_channel = post_channel.with_user(bot_user)
-        post_channel.message_post(**post_values)
+        for attempt in range(3):
+            try:
+                with self.env.cr.savepoint():
+                    post_channel.message_post(**post_values)
+                return
+            except Exception as exc:
+                text = str(exc).lower()
+                is_serialization = "could not serialize access due to concurrent update" in text
+                if is_serialization and attempt < 2:
+                    _logger.warning(
+                        "AI discuss reply serialization retry %s/3", attempt + 1
+                    )
+                    time.sleep(0.15 * (attempt + 1))
+                    continue
+                raise
 
     def _process_ai_assistant(self):
         for message in self:
