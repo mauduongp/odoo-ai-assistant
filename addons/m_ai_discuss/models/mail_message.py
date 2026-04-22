@@ -120,6 +120,49 @@ class MailMessage(models.Model):
             % (safe_reply, instruction, self._build_pending_create_buttons_html(channel))
         )
 
+    def _build_record_links_html(self, result):
+        model = result.get("model")
+        records = result.get("records") or []
+        if not model or not isinstance(records, list):
+            return ""
+        base_url = self._get_base_url().rstrip("/")
+        if not base_url:
+            return ""
+
+        links = []
+        for row in records[:10]:
+            if not isinstance(row, dict):
+                continue
+            record_id = row.get("id")
+            if not isinstance(record_id, int):
+                continue
+            label = row.get("name") or _("%s #%s") % (model, record_id)
+            safe_label = html.escape(str(label))
+            link = (
+                f'{base_url}/web#id={record_id}&model={quote(model, safe="")}'
+                f'&view_type=form'
+            )
+            links.append(f'<a href="{link}" target="_blank" rel="noopener noreferrer">{safe_label}</a>')
+
+        if not links:
+            return ""
+        return "<p>%s %s</p>" % (_("Open records:"), ", ".join(links))
+
+    def _build_reply_with_links_html(self, reply_text, action_payload):
+        if not action_payload:
+            return "", False
+        try:
+            payload_wrapper = json.loads(action_payload)
+        except Exception:
+            return "", False
+        result = payload_wrapper.get("result") or {}
+        links_html = self._build_record_links_html(result)
+        if not links_html:
+            return "", False
+
+        safe_reply = html.escape(reply_text or _("Done."))
+        return "<p>%s</p>%s" % (safe_reply, links_html), True
+
     def _pending_create_key(self, channel, ai_user):
         channel_model = getattr(channel, "_name", "mail.channel")
         return "m_ai.pending_create.%s.%s.%s" % (
@@ -291,7 +334,14 @@ class MailMessage(models.Model):
                             payload["preview_message_id"] = posted_message.id
                         message._set_pending_create(channel, ai_user, payload)
                         continue
-                message._post_ai_reply(channel, result.get("reply") or _("No reply generated."))
+                reply_text = result.get("reply") or _("No reply generated.")
+                linked_reply_html, has_links = message._build_reply_with_links_html(
+                    reply_text, result.get("action_payload")
+                )
+                if has_links:
+                    message._post_ai_reply(channel, linked_reply_html, body_is_html=True)
+                else:
+                    message._post_ai_reply(channel, reply_text)
             except Exception as exc:
                 _logger.exception("AI discuss processing failed")
                 if message._is_ai_debug_mode():
