@@ -1,1 +1,1 @@
-from . import models
+# Deprecated compatibility module.

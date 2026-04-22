@@ -11,7 +11,7 @@ OpenAI Provider
     """,
     'category': 'AI/AI',
     'website': '',
-    'depends': ['m_ai_base'],
+    'depends': ['m_ai_core'],
     'data': [
         'data/model_data.xml',
     ],

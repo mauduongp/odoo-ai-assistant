@@ -7,11 +7,11 @@
     "description": """
 AI Discuss Assistant
 ====================
-Bridge Discuss messages to AI Chat service.
+Bridge Discuss messages to AI core orchestrator service.
     """,
     "category": "AI/AI",
     "website": "",
-    "depends": ["m_ai_chat", "mail"],
+    "depends": ["m_ai_core", "mail"],
     "data": [
         "data/ai_discuss_data.xml",
     ],

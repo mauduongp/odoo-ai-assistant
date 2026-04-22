@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem name="AI" id="menu_ai" sequence="55">
+        <menuitem id="menu_ai_provider" name="AI Providers" action="m_ai_core.action_ai_provider" sequence="10"/>
+    </menuitem>
+</odoo>

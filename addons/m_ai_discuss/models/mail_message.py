@@ -95,8 +95,8 @@ class MailMessage(models.Model):
                 continue
 
             try:
-                result = message.env["m_ai.chat.service"].with_user(ai_user).process_message(
-                    session=False, user_prompt=prompt
+                result = message.env["m_ai.orchestrator.service"].with_user(ai_user).process_message(
+                    prompt
                 )
                 message._post_ai_reply(channel, result.get("reply") or _("No reply generated."))
             except Exception as exc:

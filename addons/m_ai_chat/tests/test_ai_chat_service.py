@@ -6,40 +6,30 @@ from odoo.tests.common import TransactionCase, tagged
 
 @tagged("post_install", "-at_install")
 class TestAiChatService(TransactionCase):
-    def setUp(self):
-        super().setUp()
-        self.partner = self.env["res.partner"].create({"name": "Chat Customer"})
-        self.order = self.env["sale.order"].create(
-            {
-                "partner_id": self.partner.id,
-            }
-        )
-
-    def test_process_message_sales_order_status(self):
+    def test_process_message_delegates_to_core_orchestrator(self):
         session = self.env["m_ai.chat.session"].create({"name": "S1"})
-        envelope = {
-            "type": "action",
-            "action": "sales_order_status",
-            "arguments": {"order_ref": self.order.name},
+        core_result = {
+            "reply": "Tool query_records returned 0 sale.order record(s): []",
+            "action_name": "query_records",
+            "action_payload": '{"arguments":{},"result":{}}',
         }
-        provider = self.env["m_ai.provider"]
-
-        with patch.object(type(provider), "get_provider", return_value=provider), patch.object(
-            type(provider), "get_structured_response", return_value=envelope
+        service_model = self.env["m_ai.orchestrator.service"]
+        with patch.object(
+            type(service_model), "process_message", return_value=core_result
         ):
             result = self.env["m_ai.chat.service"].process_message(session, "status?")
 
-        self.assertIn(self.order.name, result["reply"])
-        self.assertEqual(result["action_name"], "sales_order_status")
-        self.assertIn("arguments", result["action_payload"])
+        self.assertIn("query_records", result["reply"])
+        self.assertEqual(result["action_name"], "query_records")
+        self.assertEqual(result["action_payload"], '{"arguments":{},"result":{}}')
 
     def test_process_message_plain_text_fallback(self):
         session = self.env["m_ai.chat.session"].create({"name": "S2"})
-        provider = self.env["m_ai.provider"]
-        with patch.object(type(provider), "get_provider", return_value=provider), patch.object(
-            type(provider),
-            "get_structured_response",
-            return_value={"type": "text", "message": "Hello from AI"},
+        service_model = self.env["m_ai.orchestrator.service"]
+        with patch.object(
+            type(service_model),
+            "process_message",
+            return_value={"reply": "Hello from AI", "action_name": False, "action_payload": False},
         ):
             result = self.env["m_ai.chat.service"].process_message(session, "hello")
         self.assertEqual(result["reply"], "Hello from AI")
@@ -49,15 +39,11 @@ class TestAiChatService(TransactionCase):
         session = self.env["m_ai.chat.session"].create(
             {"name": "S3", "input_message": "Status of order"}
         )
-        provider = self.env["m_ai.provider"]
-        with patch.object(type(provider), "get_provider", return_value=provider), patch.object(
-            type(provider),
-            "get_structured_response",
-            return_value={
-                "type": "action",
-                "action": "sales_order_status",
-                "arguments": {"order_ref": self.order.name},
-            },
+        service_model = self.env["m_ai.orchestrator.service"]
+        with patch.object(
+            type(service_model),
+            "process_message",
+            return_value={"reply": "AI says hello", "action_name": False, "action_payload": False},
         ):
             session.action_send_message()
 

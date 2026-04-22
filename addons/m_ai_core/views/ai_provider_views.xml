@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="ai_provider_view_form" model="ir.ui.view">
+            <field name="name">AI Provider</field>
+            <field name="model">m_ai.provider</field>
+            <field name="arch" type="xml">
+                <form string="AI Provider">
+                    <header>
+                        <button name="action_test_connection" type="object" class="btn-primary" string="Test Connection" />
+                    </header>
+                    <sheet>
+                        <group>
+                            <field name="provider_type"/>
+                            <field name="api_key" password="True"/>
+                            <field name="base_url"/>
+                            <field name="default_model_id" readonly="1" force_save="1" />
+                        </group>
+                        <group>
+                            <field name="model_ids">
+                                <list editable="bottom">
+                                    <field name="model_code"/>
+                                    <field name="name"/>
+                                    <field name="default" />
+                                </list>
+                            </field>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="ai_provider_view_list" model="ir.ui.view">
+            <field name="name">AI Provider</field>
+            <field name="model">m_ai.provider</field>
+            <field name="arch" type="xml">
+                <list string="AI Providers">
+                    <field name="provider_type"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="ai_provider_view_search" model="ir.ui.view">
+            <field name="name">AI Provider</field>
+            <field name="model">m_ai.provider</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="provider_type"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_ai_provider" model="ir.actions.act_window">
+            <field name="name">AI Providers</field>
+            <field name="res_model">m_ai.provider</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="ai_provider_view_search"/>
+            <field name="view_id" ref="ai_provider_view_list"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Add a new AI provider
+                </p>
+            </field>
+        </record>
+    </data>
+</odoo>
