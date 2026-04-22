@@ -1,0 +1,23 @@
+# Runbot-style pipeline: pull Odoo + Postgres, install addons, run Odoo's test suite.
+name: Odoo CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  odoo-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Odoo install + tests
+        env:
+          COMPOSE_PROJECT_NAME: odoo-ai-gha
+          ODOO_TEST_DB: ci_test_${{ github.run_id }}
+          ODOO_MODULES: m_ai_base
+        run: |
+          chmod +x scripts/ci-test.sh
+          ./scripts/ci-test.sh

@@ -1,0 +1,42 @@
+# Local "mini runbot": Odoo + Postgres with your addons on /mnt/extra-addons.
+#
+# Dev server (browser at http://localhost:8069):
+#   docker compose up
+#
+# CI-style test run (fresh DB, install modules, run tests, exit):
+#   ./scripts/ci-test.sh
+#
+# Env overrides:
+#   ODOO_VERSION=17.0 ODOO_PORT=8070 docker compose up
+
+services:
+  db:
+    image: postgres:${POSTGRES_VERSION:-15}
+    environment:
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo
+      POSTGRES_DB: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo -d postgres"]
+      interval: 3s
+      timeout: 5s
+      retries: 15
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        ODOO_VERSION: ${ODOO_VERSION:-18.0}
+    image: odoo-ai-intelligence-web:${ODOO_VERSION:-18.0}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${ODOO_PORT:-8069}:8069"
+    volumes:
+      - ./addons:/mnt/extra-addons
+    environment:
+      HOST: db
+      USER: odoo
+      PASSWORD: odoo

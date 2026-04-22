@@ -1,0 +1,2 @@
+# Python deps for custom addons (installed into the Odoo image via Dockerfile).
+openai>=1.40.0
